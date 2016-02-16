@@ -37,7 +37,7 @@ module Zewo
       end
 
       def xcode_dir
-        "#{name}/XcodeTest"
+        "#{name}/XcodeDevelopment"
       end
 
       def xcode_project_path
