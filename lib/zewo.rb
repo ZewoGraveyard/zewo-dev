@@ -217,7 +217,7 @@ module Zewo
       end
 
       def uncommited_changes?(repo_name)
-        !system("cd #{repo_name}; git diff --exit-code --quiet")
+        !system("cd #{repo_name}; git diff --quiet HEAD")
       end
 
       def master_branch?(repo_name)
@@ -227,7 +227,7 @@ module Zewo
 
     desc :status, 'Get status of all repos'
     def status
-      each_repo do |repo|
+      each_code_repo do |repo|
         str = repo.name
         if uncommited_changes?(repo.name)
           str = str.red
@@ -243,7 +243,7 @@ module Zewo
 
     desc :pull, 'git pull on all repos'
     def pull
-      each_repo_async do |repo|
+      each_code_repo_async do |repo|
         print "Updating #{repo.name}..." + "\n"
         if uncommited_changes?(repo.name)
           print "Uncommitted changes in #{repo.name}. Not updating.".red + "\n"
@@ -258,7 +258,7 @@ module Zewo
     def push
       verify_branches
 
-      each_repo_async do |repo|
+      each_code_repo_async do |repo|
         if uncommited_changes?(repo.name)
           print "Uncommitted changes in #{repo.name}. Skipping.." + "\n"
           next
@@ -283,7 +283,7 @@ module Zewo
 
     desc :build, 'Clones all Zewo repositories'
     def build
-      each_repo do |repo|
+      each_code_repo do |repo|
         unless File.directory?("#{repo.name}/Xcode")
           puts "Skipping #{repo.name}. No Xcode project".yellow
         end
@@ -300,7 +300,7 @@ module Zewo
     def commit(message)
       return unless verify_branches
 
-      each_repo do |repo|
+      each_code_repo do |repo|
         next unless uncommited_changes?(repo.name)
         puts repo.name
         puts '--------------------------------------------------------------'
@@ -309,12 +309,14 @@ module Zewo
           system("cd #{repo.name}; git status")
           return unless prompt("Proceed with #{repo.name}?")
         end
+      end
 
-        system("cd #{repo.name}; git add --all; git commit -am #{message}")
+      each_code_repo do |repo|
+        system("cd #{repo.name}; git add --all; git commit -am \"#{message}\"")
         puts "Commited #{repo.name}\n".green
       end
-      if prompt('Pull & push changes?'.red)
-        pull
+
+      if prompt('Push changes?'.red)
         push
       end
     end
