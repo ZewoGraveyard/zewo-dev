@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby -wU
+
+require 'zewo'
+
+$VERBOSE = nil
+
+Zewo::App.start(ARGV)
+
