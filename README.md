@@ -36,3 +36,6 @@ Lastly, you'll be prompted to push your changes.
 
 ## Push & pull
 `zewodev push` and `zewodev pull` will push and pull changes for all Swift modules.
+
+## Unit testing
+If you create a folder called `Tests` in the same directory as your `Sources` directory, the tool will create a `<ModuleName>-tests` target and add the test files to that target.

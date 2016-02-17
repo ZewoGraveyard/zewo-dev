@@ -41,16 +41,31 @@ module Zewo
         xcode_project.native_targets.find { |t| t.name == target_name } || xcode_project.new_target(:bundle, target_name, :osx)
       end
 
-      def tests_dir
+      def dir(ext = nil)
+        r = name
+        r = "#{r}/#{ext}" if ext
+        r
+      end
+
+      def tests_dirname
         "Tests"
       end
 
-      def xcode_dir
-        "#{name}/XcodeDevelopment"
+      def xcode_dirname
+        "XcodeDevelopment"
       end
 
       def xcode_project_path
-        "#{xcode_dir}/#{name}.xcodeproj"
+        dir("#{xcode_dirname}/#{name}.xcodeproj")
+      end
+
+      def sources_dirname
+        if File.directory?(dir('Sources'))
+          return 'Sources'
+        elsif File.directory?(dir('Source'))
+          return 'Source'
+        end
+        nil
       end
 
       def xcode_project
@@ -61,15 +76,6 @@ module Zewo
           @xcodeproj = Xcodeproj::Project.new(xcode_project_path)
         end
         @xcodeproj
-      end
-
-      def sources_dir
-        if File.directory?("#{name}/Sources")
-          return 'Sources'
-        elsif File.directory?("#{name}/Source")
-          return 'Source'
-        end
-        nil
       end
 
       def add_files(direc, current_group, main_target)
@@ -90,7 +96,7 @@ module Zewo
 
       def build_dependencies
         puts "Configuring dependencies for #{name}".green
-        dependency_repos = File.read("#{name}/Package.swift").scan(/(?<=Zewo\/)(.*?)(?=\.git)/).map(&:first)
+        dependency_repos = File.read(dir('Package.swift')).scan(/(?<=Zewo\/)(.*?)(?=\.git)/).map(&:first)
 
         group = xcode_project.new_group('Subprojects')
         dependency_repos.each do |repo_name|
@@ -108,32 +114,46 @@ module Zewo
 
       def configure_xcode_project
         @xcodeproj = nil
-        silent_cmd("rm -rf #{xcode_dir}")
+        silent_cmd("rm -rf #{dir(xcode_dirname)}")
 
         puts "Creating Xcode project #{name}".green
 
         framework_target.build_configurations.each do |configuration|
           framework_target.build_settings(configuration.name)['HEADER_SEARCH_PATHS'] = '/usr/local/include'
           framework_target.build_settings(configuration.name)['LIBRARY_SEARCH_PATHS'] = '/usr/local/lib'
+          framework_target.build_settings(configuration.name)['ENABLE_TESTABILITY'] = 'YES'
 
-          if File.exist?("#{name}/module.modulemap")
+          if File.exist?(dir('module.modulemap'))
             framework_target.build_settings(configuration.name)['MODULEMAP_FILE'] = '../module.modulemap'
           end
         end
 
-        xcode_project.new_file('../module.modulemap') if File.exist?("#{name}/module.modulemap")
+        framework_target.frameworks_build_phase.clear
 
-        if sources_dir
-          group = xcode_project.new_group(sources_dir)
-          add_files("#{name}/#{sources_dir}/*", group, framework_target)
+        xcode_project.new_file('../module.modulemap') if File.exist?(dir('module.modulemap'))
+
+        if sources_dirname
+          group = xcode_project.new_group(sources_dirname)
+          add_files(dir("#{sources_dirname}/*"), group, framework_target)
         end
 
-        if File.directory?("#{name}/#{tests_dir}")
-          group = xcode_project.new_group(tests_dir)
-          add_files("#{name}/#{tests_dir}/*", group, test_target)
+        test_target.resources_build_phase
+        test_target.add_dependency(framework_target)
+
+        test_target.build_configurations.each do |configuration|
+          test_target.build_settings(configuration.name)['WRAPPER_EXTENSION'] = 'xctest'
+        end
+
+        if File.directory?(dir(tests_dirname))
+          group = xcode_project.new_group(tests_dirname)
+          add_files(dir("#{tests_dirname}/*"), group, test_target)
         end
 
         xcode_project.save
+
+        scheme = Xcodeproj::XCScheme.new()
+        scheme.configure_with_targets(framework_target, test_target)
+        scheme.save_as(xcode_project.path, framework_target.name, true)
       end
     end
 
@@ -145,26 +165,10 @@ module Zewo
         http.use_ssl = true
         request = Net::HTTP::Get.new(uri.request_uri)
 
-        blacklist = [
-          'Core',
-          'GrandCentralDispatch',
-          'JSONParserMiddleware',
-          'Levee',
-          'LoggerMiddleware',
-          'Middleware',
-          'Mustache',
-          'POSIXRegex',
-          'SSL',
-          'Sideburns',
-          'SwiftZMQ',
-          'WebSocket'
-        ]
-
         response = http.request(request)
 
         if response.code == '200'
           result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
-
 
           result.each do |doc|
             next if blacklist.include?(doc['name'])
@@ -172,7 +176,7 @@ module Zewo
             yield repo
           end
         else
-          puts 'Error loading repositories'
+          puts 'Error loading repositories'.red
         end
       end
 
@@ -188,8 +192,7 @@ module Zewo
 
       def each_code_repo
         each_repo do |repo|
-          unless File.exist?("#{repo.name}/Package.swift")
-            print "No Package.swift for #{repo.name}. Skipping." + "\n"
+          unless File.exist?(repo.dir('Package.swift'))
             next
           end
           yield repo
@@ -209,7 +212,7 @@ module Zewo
       def verify_branches
         last_branch_name = nil
         each_repo do |repo|
-          branch_name = `cd #{repo.name}; git rev-parse --abbrev-ref HEAD`.gsub("\n", '')
+          branch_name = `cd #{repo.dir}; git rev-parse --abbrev-ref HEAD`.gsub("\n", '')
           if !last_branch_name.nil? && branch_name != last_branch_name
             puts "Branch mismatch. Branch of #{repo.name} does not match previous branch #{branch_name}".red
             return false
@@ -257,15 +260,15 @@ module Zewo
 
     desc :pull, 'git pull on all repos'
     def pull
+      print "Updating all repositories..." + "\n"
       each_code_repo_async do |repo|
-        print "Updating #{repo.name}..." + "\n"
         if uncommited_changes?(repo.name)
           print "Uncommitted changes in #{repo.name}. Not updating.".red + "\n"
           next
         end
         system("cd #{repo.name}; git pull")
-        print "Updated #{repo.name}".green + "\n"
       end
+      puts 'Done!'
     end
 
     desc :push, 'git push on all repos'
@@ -298,14 +301,14 @@ module Zewo
     desc :build, 'Clones all Zewo repositories'
     def build
       each_code_repo do |repo|
-        unless File.directory?("#{repo.name}/Xcode")
+        unless File.directory?(repo.dir(repo.xcode_dirname))
           puts "Skipping #{repo.name}. No Xcode project".yellow
         end
         puts "Building #{repo.name}...".green
 
-        if system("cd #{repo.name}/Xcode; set -o pipefail && xcodebuild -scheme \"#{repo.name}\" -sdk \"macosx\" -toolchain /Library/Developer/Toolchains/swift-latest.xctoolchain | xcpretty") == false
+        if system("cd #{repo.dir(repo.xcode_dirname)}; set -o pipefail && xcodebuild -scheme \"#{repo.framework_target.name}\" -sdk \"macosx\" -toolchain \"/Library/Developer/Toolchains/swift-latest.xctoolchain\" | xcpretty") == false
           puts "Error building. Maybe you're using the wrong Xcode? Try `sudo xcode-select -s /Applications/Xcode-Beta.app/Contents/Developer` if you have a beta-version of Xcode installed.".red
-
+          return
         end
       end
     end
@@ -319,14 +322,13 @@ module Zewo
         puts repo.name
         puts '--------------------------------------------------------------'
         if uncommited_changes?(repo.name)
-          puts 'Status:'.yellow
-          system("cd #{repo.name}; git status")
+          system("cd #{repo.dir}; git status")
           return unless prompt("Proceed with #{repo.name}?")
         end
       end
 
       each_code_repo do |repo|
-        system("cd #{repo.name}; git add --all; git commit -am \"#{message}\"")
+        system("cd #{repo.dir}; git add --all; git commit -am \"#{message}\"")
         puts "Commited #{repo.name}\n".green
       end
 
