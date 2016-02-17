@@ -165,12 +165,24 @@ module Zewo
         http.use_ssl = true
         request = Net::HTTP::Get.new(uri.request_uri)
 
+        blacklist = %w(
+          'Core',
+          'GrandCentralDispatch',
+          'JSONParserMiddleware',
+          'LoggerMiddleware',
+          'Middleware',
+          'SSL',
+          'SwiftZMQ',
+          'WebSocket'
+        )
+
         response = http.request(request)
 
         if response.code == '200'
           result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
 
           result.each do |doc|
+            next if blacklist.include?(doc['name'])
             repo = Repo.new(doc['name'], doc)
             yield repo
           end
