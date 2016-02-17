@@ -36,6 +36,15 @@ module Zewo
         xcode_project.native_targets.find { |t| t.name == target_name } || xcode_project.new_target(:framework, target_name, :osx)
       end
 
+      def test_target
+        target_name = "#{framework_target.name}-Test"
+        xcode_project.native_targets.find { |t| t.name == target_name } || xcode_project.new_target(:bundle, target_name, :osx)
+      end
+
+      def tests_dir
+        "Tests"
+      end
+
       def xcode_dir
         "#{name}/XcodeDevelopment"
       end
@@ -117,6 +126,11 @@ module Zewo
         if sources_dir
           group = xcode_project.new_group(sources_dir)
           add_files("#{name}/#{sources_dir}/*", group, framework_target)
+        end
+
+        if File.directory?("#{name}/#{tests_dir}")
+          group = xcode_project.new_group(tests_dir)
+          add_files("#{name}/#{tests_dir}/*", group, test_target)
         end
 
         xcode_project.save
@@ -249,7 +263,7 @@ module Zewo
           print "Uncommitted changes in #{repo.name}. Not updating.".red + "\n"
           next
         end
-        silent_cmd("cd #{repo.name}; git pull")
+        system("cd #{repo.name}; git pull")
         print "Updated #{repo.name}".green + "\n"
       end
     end
