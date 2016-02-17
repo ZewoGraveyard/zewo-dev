@@ -171,6 +171,7 @@ module Zewo
           result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
 
           result.each do |doc|
+            repo = Repo.new(doc['name'], doc)
             yield repo
           end
         else
