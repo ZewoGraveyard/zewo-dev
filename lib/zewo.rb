@@ -169,13 +169,9 @@ module Zewo
           'Core',
           'GrandCentralDispatch',
           'JSONParserMiddleware',
-          'Levee',
           'LoggerMiddleware',
           'Middleware',
-          'Mustache',
-          'POSIXRegex',
           'SSL',
-          'Sideburns',
           'SwiftZMQ',
           'WebSocket'
         )
