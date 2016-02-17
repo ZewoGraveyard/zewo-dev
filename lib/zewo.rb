@@ -289,7 +289,7 @@ module Zewo
         print "Checking #{repo.name}..." + "\n"
         unless File.directory?(repo.name)
           print "Cloning #{repo.name}...".green + "\n"
-          silent_cmd("git clone #{repo.data['ssh_url']}")
+          silent_cmd("git clone #{repo.data['clone_url']}")
         end
       end
       puts 'Done!'
