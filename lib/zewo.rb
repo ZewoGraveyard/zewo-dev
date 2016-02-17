@@ -149,7 +149,6 @@ module Zewo
           'Core',
           'GrandCentralDispatch',
           'JSONParserMiddleware',
-          'Levee',
           'LoggerMiddleware',
           'Middleware',
           'SSL',
