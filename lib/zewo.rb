@@ -165,6 +165,21 @@ module Zewo
         http.use_ssl = true
         request = Net::HTTP::Get.new(uri.request_uri)
 
+        blacklist = %w(
+          'Core',
+          'GrandCentralDispatch',
+          'JSONParserMiddleware',
+          'Levee',
+          'LoggerMiddleware',
+          'Middleware',
+          'Mustache',
+          'POSIXRegex',
+          'SSL',
+          'Sideburns',
+          'SwiftZMQ',
+          'WebSocket'
+        )
+
         response = http.request(request)
 
         if response.code == '200'
