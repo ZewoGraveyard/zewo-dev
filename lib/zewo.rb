@@ -142,12 +142,11 @@ module Zewo
 
         test_target.build_configurations.each do |configuration|
           test_target.build_settings(configuration.name)['WRAPPER_EXTENSION'] = 'xctest'
+          test_target.build_settings(configuration.name)['LD_RUNPATH_SEARCH_PATHS'] = '$(inherited) @executable_path/../../Frameworks @loader_path/../Frameworks'
         end
 
-        if File.directory?(dir(tests_dirname))
-          group = xcode_project.new_group(tests_dirname)
-          add_files(dir("#{tests_dirname}/*"), group, test_target)
-        end
+        group = xcode_project.new_group(tests_dirname)
+        add_files(dir("#{tests_dirname}/*"), group, test_target)
 
         xcode_project.save
 
