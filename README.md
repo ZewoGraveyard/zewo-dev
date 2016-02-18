@@ -28,14 +28,10 @@ Run `zewodev make_projects` to generate Xcode projects for all Swift modules. Ev
 ## Checking status
 `zewodev status` will show you the current status of all the repositories. Red means you have uncommitted changes, green means there are no uncommitted changes.
 
-
-## Committing	
-`zewodev commit MESSAGE` will take you through all repositories and perform `git add --all; git commit -am <MESSAGE>` after you've confirmed that the status of each repo looks ok. Commits are performed after you've confirmed **all** commits.
-
 Lastly, you'll be prompted to push your changes.
 
-## Push & pull
-`zewodev push` and `zewodev pull` will push and pull changes for all Swift modules.
+## Pulling changes
+`zewodev pull` pulls changes from all repositories
 
 ## Unit testing
 If you create a folder called `Tests` in the same directory as your `Sources` directory, the tool will create a `<ModuleName>-tests` target and add the test files to that target.

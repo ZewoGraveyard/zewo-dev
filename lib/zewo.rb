@@ -234,12 +234,11 @@ module Zewo
       end
 
       def prompt(question)
-        printf "#{question} -  press 'y' to continue: "
+        printf "#{question} -  y/N: "
         p = STDIN.gets.chomp
         if p == 'y'
           true
         else
-          puts 'Aborting..'
           false
         end
       end
@@ -282,77 +281,18 @@ module Zewo
       puts 'Done!'
     end
 
-    desc :push, 'git push on all repos'
-    def push
-      verify_branches
-
-      each_code_repo_async do |repo|
-        if uncommited_changes?(repo.name)
-          print "Uncommitted changes in #{repo.name}. Skipping.." + "\n"
-          next
-        end
-        print "Pushing #{repo.name}...".green + "\n"
-        silent_cmd("cd #{repo.name}; git push")
-      end
-      print 'Done!' + "\n"
-    end
-
     desc :init, 'Clones all Zewo repositories'
     def init
+      use_ssh = prompt('Clone using SSH?')
+
       each_repo_async do |repo|
         print "Checking #{repo.name}..." + "\n"
         unless File.directory?(repo.name)
           print "Cloning #{repo.name}...".green + "\n"
-          silent_cmd("git clone #{repo.data['clone_url']}")
+          silent_cmd("git clone #{repo.data[use_ssh ? 'clone_url' : 'ssh_url']}")
         end
       end
       puts 'Done!'
-    end
-
-    desc :build, 'Clones all Zewo repositories'
-    def build
-      each_code_repo do |repo|
-        unless File.directory?(repo.dir(repo.xcode_dirname))
-          puts "Skipping #{repo.name}. No Xcode project".yellow
-        end
-        puts "Building #{repo.name}...".green
-
-        if system("cd #{repo.dir(repo.xcode_dirname)}; set -o pipefail && xcodebuild -scheme \"#{repo.framework_target.name}\" -sdk \"macosx\" -toolchain \"/Library/Developer/Toolchains/swift-latest.xctoolchain\" | xcpretty") == false
-          puts "Error building. Maybe you're using the wrong Xcode? Try `sudo xcode-select -s /Applications/Xcode-Beta.app/Contents/Developer` if you have a beta-version of Xcode installed.".red
-          return
-        end
-      end
-    end
-
-    desc 'commit MESSAGE', 'Commits changes to all repos with the same commit message'
-    def commit(message)
-      return unless verify_branches
-
-      each_code_repo do |repo|
-        next unless uncommited_changes?(repo.name)
-        puts repo.name
-        puts '--------------------------------------------------------------'
-        if uncommited_changes?(repo.name)
-          system("cd #{repo.dir}; git status")
-          return unless prompt("Proceed with #{repo.name}?")
-        end
-      end
-
-      each_code_repo do |repo|
-        system("cd #{repo.dir}; git add --all; git commit -am \"#{message}\"")
-        puts "Commited #{repo.name}\n".green
-      end
-
-      if prompt('Push changes?'.red)
-        push
-      end
-    end
-
-    desc :make_projects, 'Makes projects'
-    def make_projects
-      each_code_repo(&:configure_xcode_project)
-
-      each_code_repo(&:build_dependencies)
     end
   end
 end
