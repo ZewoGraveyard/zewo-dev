@@ -143,6 +143,8 @@ module Zewo
         test_target.build_configurations.each do |configuration|
           test_target.build_settings(configuration.name)['WRAPPER_EXTENSION'] = 'xctest'
           test_target.build_settings(configuration.name)['LD_RUNPATH_SEARCH_PATHS'] = '$(inherited) @executable_path/../../Frameworks @loader_path/../Frameworks'
+          test_target.build_settings(configuration.name)['HEADER_SEARCH_PATHS'] = '/usr/local/include'
+          test_target.build_settings(configuration.name)['LIBRARY_SEARCH_PATHS'] = '/usr/local/lib'
         end
 
         group = xcode_project.new_group(tests_dirname)
