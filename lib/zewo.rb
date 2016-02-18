@@ -281,6 +281,13 @@ module Zewo
       puts 'Done!'
     end
 
+    desc :make_projects, 'Makes Xcode projects for all modules'
+    def make_projects
+      each_code_repo(&:configure_xcode_project)
+
+      each_code_repo(&:build_dependencies)
+    end
+
     desc :init, 'Clones all Zewo repositories'
     def init
       use_ssh = prompt('Clone using SSH?')
