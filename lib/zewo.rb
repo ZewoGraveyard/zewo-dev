@@ -154,6 +154,7 @@ module Zewo
 
         scheme = Xcodeproj::XCScheme.new()
         scheme.configure_with_targets(framework_target, test_target)
+        scheme.test_action.code_coverage_enabled = true
         scheme.save_as(xcode_project.path, framework_target.name, true)
       end
     end
