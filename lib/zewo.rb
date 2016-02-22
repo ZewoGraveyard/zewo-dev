@@ -175,7 +175,6 @@ module Zewo
           'Middleware',
           'SSL',
           'SwiftZMQ',
-          'WebSocket',
           'HTTPMiddleware'
         ]
 
