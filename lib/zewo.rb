@@ -281,6 +281,38 @@ module Zewo
       end
     end
 
+    desc :checkout, 'Checks out all code repositories to the latest patch release for the given tag/branch'
+    option :branch
+    option :tag
+    def checkout()
+      if !options[:branch] && !options[:tag]
+        puts 'Need to specify either --tag or --branch'.red
+        return
+      end
+
+      each_code_repo do |repo|
+        matched = nil
+
+        if options[:tag]
+          matched = `cd #{repo.name} && git tag`
+            .split("\n")
+            .select { |t| t.start_with?(options[:tag]) }
+            .last
+        end
+
+        if options[:branch]
+          matched = options[:branch]
+        end
+
+        if matched
+          silent_cmd("cd #{repo.name} && git checkout #{matched}")
+          puts "Checked out #{repo.name} at #{matched}".green
+        else
+          puts "No matching specifiers for #{repo.name}".red
+        end
+      end
+    end
+
     desc :pull, 'git pull on all repos'
     def pull
       print "Updating all repositories..." + "\n"
