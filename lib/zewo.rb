@@ -270,6 +270,17 @@ module Zewo
       end
     end
 
+    desc :tag, 'Tags all code repositories with the given tag. Asks to confirm for each repository'
+    def tag(tag)
+      each_code_repo do |repo|
+        shouldTag = prompt("create tag #{tag} in #{repo.name}?")
+        if shouldTag
+          silent_cmd("cd #{repo.name} && git tag #{tag}")
+          puts repo.name.green
+        end
+      end
+    end
+
     desc :pull, 'git pull on all repos'
     def pull
       print "Updating all repositories..." + "\n"
