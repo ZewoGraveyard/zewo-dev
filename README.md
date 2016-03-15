@@ -3,7 +3,7 @@ zewo-dev
 
 `zewo-dev` is a tool to make developing Zewo modules and tracking their status easier.
 
-The tool manages **only** modules including a `Package.swift` file, but checks out all the repositories in the Zewo organisation.
+The tool manages **only** modules including a `Package.swift` file, but checks out all the repositories in the Zewo organization.
 
 ## Installing
 * Tool is built using Ruby.
@@ -12,7 +12,7 @@ The tool manages **only** modules including a `Package.swift` file, but checks o
 `gem install zewo-dev`
 
 ## Getting started
-Create a directory in which you want to put all Zewo repositories, and move into it. Then run `zewo init`. This will clone all repositories in the Zewo organisation.
+Create a directory in which you want to put all Zewo repositories, and move into it. Then run `zewodev init`. This will clone all repositories in the Zewo organization.
 
 ```
 mkdir zewo-development
