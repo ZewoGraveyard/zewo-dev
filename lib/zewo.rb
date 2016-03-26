@@ -328,11 +328,12 @@ module Zewo
         return
       end
 
-      each_code_repo do |repo|
+      Dir['*/'].each do |folder_name|
+        folder_name = folder_name[0...-1]
         matched = nil
 
         if options[:tag]
-          matched = `cd #{repo.name} && git tag`
+          matched = `cd #{folder_name} && git tag`
             .split("\n")
             .select { |t| t.start_with?(options[:tag]) }
             .last
@@ -343,10 +344,10 @@ module Zewo
         end
 
         if matched
-          silent_cmd("cd #{repo.name} && git checkout #{matched}")
-          puts "Checked out #{repo.name} at #{matched}".green
+          silent_cmd("cd #{folder_name} && git checkout #{matched}")
+          puts "Checked out #{folder_name} at #{matched}".green
         else
-          puts "No matching specifiers for #{repo.name}".red
+          puts "No matching specifiers for #{folder_name}".red
         end
       end
     end
