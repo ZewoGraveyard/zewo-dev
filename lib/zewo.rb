@@ -33,6 +33,11 @@ module Zewo
 
       def framework_target
         target_name = name.gsub('-OSX', '').gsub('-', '_')
+
+        if target_name == 'OS'
+          target_name = 'OperatingSystem'
+        end
+
         xcode_project.native_targets.find { |t| t.name == target_name } || xcode_project.new_target(:framework, target_name, :osx)
       end
 
@@ -96,12 +101,14 @@ module Zewo
 
       def build_dependencies
         puts "Configuring dependencies for #{name}".green
-        dependency_repos = File.read(dir('Package.swift')).scan(/(?<=Zewo\/)(.*?)(?=\.git)/).map(&:first)
-        
+        dependency_repos = File.read(dir('Package.swift')).scan(/(?<=Zewo\/|SwiftX\/|VeniceX\/|paulofaria\/)(.*?)(?=\.git)/).map(&:first)
+
         // here we should do something like dependency_repos -= ['CMySQL', 'COpenSSL', 'CLibpq']
 
         group = xcode_project.new_group('Subprojects')
         dependency_repos.each do |repo_name|
+          next if repo_name.end_with?('-OSX')
+
           repo = Repo.new(repo_name)
           project_reference = group.new_file("#{repo.xcode_project_path}")
           project_reference.path = "../../#{project_reference.path}"
@@ -247,6 +254,42 @@ module Zewo
       def master_branch?(repo_name)
         name = `cd #{repo_name}; git rev-parse --abbrev-ref HEAD`
       end
+
+      def each_osx_whitelisted_repo
+        Zewo::OSX_CODE_REPO_WHITELIST.each do |repo_name|
+
+          name = repo_name.split('/').last
+          if name.end_with?('-OSX')
+            name = name[0...-4]
+          end
+
+          repo_data = Hash[
+            'name', name,
+            'organization', repo_name.split('/').first,
+            'clone_url', "https://github.com/#{repo_name}"
+          ]
+
+          yield Repo.new(repo_data['name'], repo_data)
+        end
+      end
+
+      def each_osx_whitelisted_repo_async
+        threads = []
+        each_osx_whitelisted_repo do |repo|
+          threads << Thread.new do
+            yield(repo)
+          end
+        end
+        ThreadsWait.all_waits(*threads)
+      end
+
+      def checkout_modulemap_versions
+        repos = ['CLibvenice', 'CURIParser', 'CHTTPParser']
+        repos.each do |repo|
+          silent_cmd("cd #{repo} && git checkout 0.2.0")
+          puts "Checked out #{repo} at 0.2.0".green
+        end
+      end
     end
 
     desc :status, 'Get status of all repos'
@@ -341,5 +384,104 @@ module Zewo
       end
       puts 'Done!'
     end
+
+    desc :clone_osx_dev, 'Clones repositories for OSX development'
+    def clone_osx_dev
+      puts 'Cloning repositories...'
+      each_osx_whitelisted_repo_async do |repo|
+        unless File.directory?(repo.name)
+          print "Cloning #{repo.data['organization']}/#{repo.name}...".green + "\n"
+          silent_cmd("git clone #{repo.data['clone_url']}")
+
+          cloned_name = repo.data['clone_url'].split('/').last
+          if cloned_name.end_with?('-OSX')
+            FileUtils.mv cloned_name, cloned_name[0...-4]
+          end
+        end
+      end
+    end
+
+    desc :make_osx_dev_projects, 'Makes Xcode projects for OSX development repositories'
+    def make_osx_dev_projects
+      each_osx_whitelisted_repo(&:configure_xcode_project)
+      each_osx_whitelisted_repo(&:build_dependencies)
+    end
+
+    desc :setup_osx_dev, 'Sets up OSX development environment (clone, checkout, create xcode projects)'
+    option :version, :required => true
+    def setup_osx_dev()
+      clone_osx_dev()
+
+      invoke 'checkout', [], :tag => options[:version]
+
+      checkout_modulemap_versions()
+
+      make_osx_dev_projects()
+    end
   end
+
+  OSX_CODE_REPO_WHITELIST = [
+
+    # Zewo stuff
+    'zewo/Base64',
+    'zewo/BasicAuthMiddleware',
+    'zewo/ContentNegotiationMiddleware',
+    'zewo/Data',
+    'zewo/Event',
+    'zewo/HTTP',
+    'zewo/HTTPJSON',
+    'zewo/HTTPParser',
+    'zewo/HTTPSerializer',
+    'zewo/InterchangeData',
+    'zewo/JSON',
+    'zewo/JSONMediaType',
+    'zewo/Log',
+    'zewo/LogMiddleware',
+    'zewo/MediaType',
+    'zewo/Mustache',
+    'zewo/MySQL',
+    'zewo/OS',
+    'zewo/OpenSSL', 'paulofaria/stream', #just for OpenSSL
+    'zewo/POSIXRegex',
+    'zewo/PathParameterMiddleware',
+    'zewo/PostgreSQL',
+    'zewo/RegexRouteMatcher',
+    'zewo/Router',
+    'zewo/SQL',
+    'zewo/Sideburns',
+    'zewo/String',
+    'zewo/TrieRouteMatcher',
+    'zewo/URI',
+    'zewo/URLEncodedForm',
+    'zewo/WebSocket',
+    'zewo/ZeroMQ',
+    'zewo/Zewo',
+
+    # C stuff
+    'zewo/CHTTPParser',
+    'zewo/CLibpq-OSX',
+    'zewo/CMySQL-OSX',
+    'zewo/COpenSSL-OSX',
+    'zewo/CURIParser',
+    'zewo/CZeroMQ',
+
+    # VeniceX stuff
+    'venicex/CLibvenice',
+    'venicex/Venice',
+    'venicex/IP',
+    'venicex/TCP',
+    'venicex/UDP',
+    'venicex/HTTPServer',
+    'venicex/HTTPClient',
+    'venicex/TCPSSL',
+    'venicex/HTTPSServer',
+    'venicex/HTTPSClient',
+    'venicex/File',
+    'venicex/HTTPFile',
+    'venicex/ChannelStream',
+
+    # SwiftX stuff
+    'swiftx/S4',
+    'swiftx/C7'
+  ]
 end
