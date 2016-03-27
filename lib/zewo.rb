@@ -103,7 +103,7 @@ module Zewo
         puts "Configuring dependencies for #{name}".green
         dependency_repos = File.read(dir('Package.swift')).scan(/(?<=Zewo\/|SwiftX\/|VeniceX\/|paulofaria\/)(.*?)(?=\.git)/).map(&:first)
 
-        // here we should do something like dependency_repos -= ['CMySQL', 'COpenSSL', 'CLibpq']
+        # here we should do something like dependency_repos -= ['CMySQL', 'COpenSSL', 'CLibpq']
 
         group = xcode_project.new_group('Subprojects')
         dependency_repos.each do |repo_name|
