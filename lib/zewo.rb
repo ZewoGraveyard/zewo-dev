@@ -89,6 +89,8 @@ module Zewo
         puts "Configuring dependencies for #{name}".green
         dependency_repos = File.read(dir('Package.swift')).scan(%r{/(?<=Zewo\/)(.*?)(?=\.git)/}).map(&:first)
 
+        # here we should do something like dependency_repos -= ['CMySQL', 'COpenSSL', 'CLibpq']
+
         group = xcode_project.new_group('Subprojects')
         dependency_repos.each do |repo_name|
           repo = Repo.new(repo_name)
@@ -154,16 +156,9 @@ module Zewo
         http.use_ssl = true
         request = Net::HTTP::Get.new(uri.request_uri)
 
-        blacklist = %w(
-          'Core',
-          'GrandCentralDispatch',
-          'JSONParserMiddleware',
-          'LoggerMiddleware',
-          'Middleware',
-          'SSL',
-          'SwiftZMQ',
-          'HTTPMiddleware'
-        )
+        blacklist = [
+          'ZeroMQ'
+        ]
 
         response = http.request(request)
 
