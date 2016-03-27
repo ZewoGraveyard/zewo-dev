@@ -244,7 +244,8 @@ module Zewo
     def status
       each_code_repo do |repo|
         str = repo.name
-        str = if uncommited_changes?(repo.name) ? str.red : str.green
+        str = uncommited_changes?(repo.name) ? str.red : str.green
+
         tag = `cd #{repo.name}; git describe --abbrev=0 --tags` || 'No tag'
         str += " (#{tag})"
         puts str.delete("\n")
