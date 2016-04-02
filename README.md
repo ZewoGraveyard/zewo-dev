@@ -21,6 +21,9 @@ zewodev init
 ```
 
 ## Xcode development
+
+> A new method has been implemented to simplify the setup process `zewodev setup_osx_dev`. This command removes the need to perform the steps below.
+
 Run `zewodev make_projects` to generate Xcode projects for all Swift modules. Every time this command is run, the previously generated projects are removed entirely. Xcode files should not be pushed. Add `XcodeDevelopment` to `.gitignore` if not there already.
 
 **Because the tool also adds modules as dependencies you can work on several repositories simultaneously.**
