@@ -299,24 +299,12 @@ module Zewo
 
       Dir['*/'].each do |folder_name|
         folder_name = folder_name[0...-1]
-        matched = nil
-
-        if options[:tag]
-          matched = `cd #{folder_name} && git tag`
-            .split("\n")
-            .select { |t| t.start_with?(options[:tag]) }
-            .last
-        end
-
-        if options[:branch]
-          matched = options[:branch]
-          matched = `cd #{repo.name} && git tag`
-                    .split("\n")
-                    .select { |t| t.start_with?(options[:tag]) }
-                    .last
-        end
-
+        matched = `cd #{repo.name} && git tag`
+                  .split("\n")
+                  .select { |t| t.start_with?(options[:tag]) }
+                  .last if options[:tag]
         matched = options[:branch] if options[:branch]
+
         if matched
           silent_cmd("cd #{folder_name} && git checkout #{matched}")
           puts "Checked out #{folder_name} at #{matched}".green
