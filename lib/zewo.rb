@@ -1,7 +1,6 @@
 require 'zewo/version'
 
 require 'thor'
-require 'rubygems'
 require 'json'
 require 'net/http'
 require 'uri'
@@ -37,7 +36,6 @@ module Zewo
         if target_name == 'OS'
           target_name = 'OperatingSystem'
         end
-
         xcode_project.native_targets.find { |t| t.name == target_name } || xcode_project.new_target(:framework, target_name, :osx)
       end
 
@@ -53,11 +51,11 @@ module Zewo
       end
 
       def tests_dirname
-        "Tests"
+        'Tests'
       end
 
       def xcode_dirname
-        "XcodeDevelopment"
+        'XcodeDevelopment'
       end
 
       def xcode_project_path
@@ -65,22 +63,14 @@ module Zewo
       end
 
       def sources_dirname
-        if File.directory?(dir('Sources'))
-          return 'Sources'
-        elsif File.directory?(dir('Source'))
-          return 'Source'
-        end
-        nil
+        return 'Sources' if File.directory?(dir('Sources'))
+        return 'Source'  if File.directory?(dir('Source'))
       end
 
       def xcode_project
         return @xcodeproj if @xcodeproj
-        if File.exist?(xcode_project_path)
-          @xcodeproj = Xcodeproj::Project.open(xcode_project_path)
-        else
-          @xcodeproj = Xcodeproj::Project.new(xcode_project_path)
-        end
-        @xcodeproj
+        return Xcodeproj::Project.open(xcode_project_path) if File.exist?(xcode_project_path)
+        Xcodeproj::Project.new(xcode_project_path)
       end
 
       def add_files(direc, current_group, main_target)
@@ -102,22 +92,15 @@ module Zewo
       def build_dependencies
         puts "Configuring dependencies for #{name}".green
         dependency_repos = File.read(dir('Package.swift')).scan(/(?<=Zewo\/|SwiftX\/|VeniceX\/|paulofaria\/)(.*?)(?=\.git)/).map(&:first)
-
-        # here we should do something like dependency_repos -= ['CMySQL', 'COpenSSL', 'CLibpq']
-
         group = xcode_project.new_group('Subprojects')
         dependency_repos.each do |repo_name|
           next if repo_name.end_with?('-OSX')
 
           repo = Repo.new(repo_name)
-          project_reference = group.new_file("#{repo.xcode_project_path}")
+          project_reference = group.new_file(repo.xcode_project_path.to_s)
           project_reference.path = "../../#{project_reference.path}"
-
-          if framework_target
-            framework_target.add_dependency(repo.framework_target)
-          end
+          framework_target.add_dependency(repo.framework_target) if framework_target
         end
-
         xcode_project.save
       end
 
@@ -161,7 +144,7 @@ module Zewo
 
         xcode_project.save
 
-        scheme = Xcodeproj::XCScheme.new()
+        scheme = Xcodeproj::XCScheme.new
         scheme.configure_with_targets(framework_target, test_target)
         scheme.test_action.code_coverage_enabled = true
         scheme.save_as(xcode_project.path, framework_target.name, true)
@@ -176,12 +159,9 @@ module Zewo
         http.use_ssl = true
         request = Net::HTTP::Get.new(uri.request_uri)
 
-        blacklist = [
-          'ZeroMQ'
-        ]
+        blacklist = ['ZeroMQ']
 
         response = http.request(request)
-
         if response.code == '200'
           result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
 
@@ -207,9 +187,7 @@ module Zewo
 
       def each_code_repo
         each_repo do |repo|
-          unless File.exist?(repo.dir('Package.swift'))
-            next
-          end
+          next unless File.exist?(repo.dir('Package.swift'))
           yield repo
         end
       end
@@ -227,7 +205,7 @@ module Zewo
       def verify_branches
         last_branch_name = nil
         each_repo do |repo|
-          branch_name = `cd #{repo.dir}; git rev-parse --abbrev-ref HEAD`.gsub("\n", '')
+          branch_name = `cd #{repo.dir}; git rev-parse --abbrev-ref HEAD`.delete("\n")
           if !last_branch_name.nil? && branch_name != last_branch_name
             puts "Branch mismatch. Branch of #{repo.name} does not match previous branch #{branch_name}".red
             return false
@@ -240,11 +218,7 @@ module Zewo
       def prompt(question)
         printf "#{question} -  y/N: "
         p = STDIN.gets.chomp
-        if p == 'y'
-          true
-        else
-          false
-        end
+        p == 'y'
       end
 
       def uncommited_changes?(repo_name)
@@ -252,7 +226,7 @@ module Zewo
       end
 
       def master_branch?(repo_name)
-        name = `cd #{repo_name}; git rev-parse --abbrev-ref HEAD`
+        `cd #{repo_name}; git rev-parse --abbrev-ref HEAD`
       end
 
       def each_osx_whitelisted_repo
@@ -296,23 +270,18 @@ module Zewo
     def status
       each_code_repo do |repo|
         str = repo.name
-        if uncommited_changes?(repo.name)
-          str = str.red
-        else
-          str = str.green
-        end
-
+        str = uncommited_changes?(repo.name) ? str.red : str.green
         tag = `cd #{repo.name}; git describe --abbrev=0 --tags` || 'No tag'
         str += " (#{tag})"
-        puts str.gsub("\n", '')
+        puts str.delete("\n")
       end
     end
 
     desc :tag, 'Tags all code repositories with the given tag. Asks to confirm for each repository'
     def tag(tag)
       each_code_repo do |repo|
-        shouldTag = prompt("create tag #{tag} in #{repo.name}?")
-        if shouldTag
+        should_tag = prompt("create tag #{tag} in #{repo.name}?")
+        if should_tag
           silent_cmd("cd #{repo.name} && git tag #{tag}")
           puts repo.name.green
         end
@@ -322,7 +291,7 @@ module Zewo
     desc :checkout, 'Checks out all code repositories to the latest patch release for the given tag/branch'
     option :branch
     option :tag
-    def checkout()
+    def checkout
       if !options[:branch] && !options[:tag]
         puts 'Need to specify either --tag or --branch'.red
         return
@@ -330,18 +299,11 @@ module Zewo
 
       Dir['*/'].each do |folder_name|
         folder_name = folder_name[0...-1]
-        matched = nil
-
-        if options[:tag]
-          matched = `cd #{folder_name} && git tag`
-            .split("\n")
-            .select { |t| t.start_with?(options[:tag]) }
-            .last
-        end
-
-        if options[:branch]
-          matched = options[:branch]
-        end
+        matched = `cd #{repo.name} && git tag`
+                  .split("\n")
+                  .select { |t| t.start_with?(options[:tag]) }
+                  .last if options[:tag]
+        matched = options[:branch] if options[:branch]
 
         if matched
           silent_cmd("cd #{folder_name} && git checkout #{matched}")
@@ -354,7 +316,7 @@ module Zewo
 
     desc :pull, 'git pull on all repos'
     def pull
-      print "Updating all repositories..." + "\n"
+      print "Updating all repositories...\n"
       each_code_repo_async do |repo|
         if uncommited_changes?(repo.name)
           print "Uncommitted changes in #{repo.name}. Not updating.".red + "\n"
@@ -368,7 +330,6 @@ module Zewo
     desc :make_projects, 'Makes Xcode projects for all modules'
     def make_projects
       each_code_repo(&:configure_xcode_project)
-
       each_code_repo(&:build_dependencies)
     end
 
