@@ -241,6 +241,11 @@ module Zewo
             name = name[0...-4]
           end
 
+          # rename OS and OperatingSystem to System - workaround
+          if name == 'OS' || name == 'OperatingSystem' && File.directory?('System')
+            name = 'System'
+          end
+
           repo_data = Hash[
             'name', name,
             'organization', repo_name.split('/').first,
@@ -377,6 +382,10 @@ module Zewo
     option :version, :required => true
     def setup_osx_dev()
       clone_osx_dev()
+
+      if options[:version] == '0.3'
+        `mv OS System`
+      end
 
       invoke 'checkout', [], :tag => options[:version]
 
