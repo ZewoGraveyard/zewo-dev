@@ -69,8 +69,12 @@ module Zewo
 
       def xcode_project
         return @xcodeproj if @xcodeproj
-        return Xcodeproj::Project.open(xcode_project_path) if File.exist?(xcode_project_path)
-        Xcodeproj::Project.new(xcode_project_path)
+        if File.exist?(xcode_project_path)
+          @xcodeproj = Xcodeproj::Project.open(xcode_project_path)
+        else
+          @xcodeproj = Xcodeproj::Project.new(xcode_project_path)
+        end
+        @xcodeproj
       end
 
       def add_files(direc, current_group, main_target)
@@ -299,7 +303,7 @@ module Zewo
 
       Dir['*/'].each do |folder_name|
         folder_name = folder_name[0...-1]
-        matched = `cd #{repo.name} && git tag`
+        matched = `cd #{folder_name} && git tag`
                   .split("\n")
                   .select { |t| t.start_with?(options[:tag]) }
                   .last if options[:tag]
