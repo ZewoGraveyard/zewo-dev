@@ -157,25 +157,30 @@ module Zewo
 
     no_commands do
       def each_repo
-        uri = URI.parse('https://api.github.com/orgs/Zewo/repos?per_page=200')
+        uris = [
+          URI.parse('https://api.github.com/orgs/Zewo/repos?per_page=200'),
+          URI.parse('https://api.github.com/orgs/open-swift/repos?per_page=200')
+        ]
 
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        request = Net::HTTP::Get.new(uri.request_uri)
+        uris.each do |uri|
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          request = Net::HTTP::Get.new(uri.request_uri)
 
-        blacklist = ['ZeroMQ']
+          blacklist = ['ZeroMQ']
 
-        response = http.request(request)
-        if response.code == '200'
-          result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
+          response = http.request(request)
+          if response.code == '200'
+            result = JSON.parse(response.body).sort_by { |hsh| hsh['name'] }
 
-          result.each do |doc|
-            next if blacklist.include?(doc['name'])
-            repo = Repo.new(doc['name'], doc)
-            yield repo
+            result.each do |doc|
+              next if blacklist.include?(doc['name'])
+              repo = Repo.new(doc['name'], doc)
+              yield repo
+            end
+          else
+            puts 'Error loading repositories'.red
           end
-        else
-          puts 'Error loading repositories'.red
         end
       end
 
