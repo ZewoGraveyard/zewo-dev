@@ -35,7 +35,10 @@ module Zewo
 
             def clone
                 puts "Cloning #{@organization}/#{@repo}".green
-                `git clone https://github.com/#{@organization}/#{@repo} &> /dev/null`
+
+                flags = ''
+                flags = '--branch 0.2.0' if @repo == 'CURIParser' || @repo == 'CHTTPParser' || @repo == 'CLibvenice'
+                `git clone #{flags} https://github.com/#{@organization}/#{@repo} &> /dev/null`
             end
 
             def dependencies
@@ -178,6 +181,7 @@ module Zewo
 
             def framework_target
                 target_name = repo.gsub('-OSX', '').gsub('-', '_')
+                target_name = 'OperatingSystem' if target_name == 'OS'
                 @xcode_project.native_targets.find { |t| t.name == target_name } || @xcode_project.new_target(:framework, target_name, :osx)
             end
 
@@ -188,11 +192,12 @@ module Zewo
 
             # getter/setter for class variable
             def Repo::repos
-              @@repos
+                @@repos
             end
 
             def Repo::repos= (value)
-              @@repos = value
+                puts @@repos
+                @@repos = value
             end
         end
 
