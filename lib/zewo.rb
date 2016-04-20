@@ -206,7 +206,7 @@ module Zewo
 
         desc :init, 'Clones all repositories from the topmost repository node.'
         def init
-            top_node = Repo.new('Zewo', 'Flux')
+            top_node = Repo.new('Flux', 'Zewo')
             Repo.repos['Zewo/Flux'] = top_node
 
             top_node.clone_dependencies()
