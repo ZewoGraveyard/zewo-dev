@@ -206,8 +206,8 @@ module Zewo
 
         desc :init, 'Clones all repositories from the topmost repository node.'
         def init
-            top_node = Repo.new('Zewo', 'Zewo')
-            Repo.repos['Zewo/Zewo'] = top_node
+            top_node = Repo.new('Zewo', 'Flux')
+            Repo.repos['Zewo/Flux'] = top_node
 
             top_node.clone_dependencies()
             top_node.setup_xcode_projects()
